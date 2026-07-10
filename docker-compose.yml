@@ -16,6 +16,34 @@ services:
       timeout: 20s
       retries: 10
 
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.147.0
+    restart: unless-stopped
+    command:
+      - '--promscrape.config=/etc/vm/scrape.yml'
+      - '--storageDataPath=/storage'
+      - '--retentionPeriod=30d'
+    volumes:
+      - o11y-vm-data:/storage
+      - ./configs/victoriametrics/scrape.yml:/etc/vm/scrape.yml:ro
+
+  node_exporter:
+    image: prom/node-exporter:v1.11.1
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.systemd'
+    volumes:
+      - /:/host:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /run/dbus:/run/dbus:ro
+      - /run/udev:/run/udev:ro
+
 volumes:
   o11y-grafana-data:
     name: o11y-grafana-data
+  o11y-vm-data:
+    name: o11y-vm-data
