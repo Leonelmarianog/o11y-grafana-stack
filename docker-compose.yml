@@ -25,7 +25,7 @@ services:
       - '--retentionPeriod=30d'
     volumes:
       - o11y-vm-data:/storage
-      - ./configs/victoriametrics/scrape.yml:/etc/vm/scrape.yml:ro
+      - ./configs/victoriametrics:/etc/vm:ro
 
   node_exporter:
     image: prom/node-exporter:v1.11.1
