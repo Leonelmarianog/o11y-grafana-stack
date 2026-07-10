@@ -1,0 +1,8 @@
+# Design/spec docs
+docs/
+
+# JetBrains
+.idea/
+
+# Secrets
+.env

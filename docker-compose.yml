@@ -1,0 +1,26 @@
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:?}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:?}
+    networks:
+      - o11y
+    volumes:
+      - o11y-grafana-data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+
+networks:
+  o11y:
+    name: o11y
+    driver: bridge
+
+volumes:
+  o11y-grafana-data:
+    name: o11y-grafana-data
