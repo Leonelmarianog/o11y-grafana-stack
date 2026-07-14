@@ -5,6 +5,7 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:?}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:?}
+      - GOMEMLIMIT=805306368  # 768 MiB soft limit; Go shrinks the heap before hitting it, no OOM-kill
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
