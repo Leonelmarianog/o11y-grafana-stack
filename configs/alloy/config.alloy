@@ -1,0 +1,117 @@
+// Pushes all collected logs to Loki.
+loki.write "loki" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 1. journald — sshd (login attempts), kernel, Docker daemon, and the
+//    systemd-unit events for fail2ban + unattended-upgrades (start/stop/run).
+// ---------------------------------------------------------------------------
+
+// Labels journald entries: unit (systemd unit), level (priority), job, host.
+discovery.relabel "journal" {
+	targets = []
+
+	rule {
+		source_labels = ["__journal__systemd_unit"]
+		target_label  = "unit"
+	}
+
+	rule {
+		source_labels = ["__journal_priority_keyword"]
+		target_label  = "level"
+	}
+
+	rule {
+		target_label = "job"
+		replacement  = "journal"
+	}
+
+	rule {
+		target_label = "host"
+		replacement  = constants.hostname
+	}
+}
+
+// Tails the system journal (sshd, kernel, systemd) and forwards to the writer.
+loki.source.journal "system" {
+	relabel_rules = discovery.relabel.journal.rules
+	forward_to    = [loki.write.loki.receiver]
+}
+
+// ---------------------------------------------------------------------------
+// 2. Host log files (NOT in journald) — these apps write to their own files:
+//    /var/log/fail2ban.log (each ban/unban line) and
+//    /var/log/unattended-upgrades/*.log (which packages upgraded, success/fail).
+// ---------------------------------------------------------------------------
+
+// Declares /var/log/fail2ban.log as a tail target with job=fail2ban.
+local.file_match "fail2ban" {
+	path_targets = [{
+		__path__ = "/var/log/fail2ban.log",
+		job      = "fail2ban",
+		host     = constants.hostname,
+	}]
+}
+
+// Tails that file and forwards new lines to the writer.
+loki.source.file "fail2ban" {
+	targets    = local.file_match.fail2ban.targets
+	forward_to = [loki.write.loki.receiver]
+}
+
+// Declares the unattended-upgrades logs as tail targets, job=unattended-upgrades.
+local.file_match "unattended_upgrades" {
+	path_targets = [{
+		__path__ = "/var/log/unattended-upgrades/*.log",
+		job      = "unattended-upgrades",
+		host     = constants.hostname,
+	}]
+}
+
+// Tails those files and forwards new lines to the writer.
+loki.source.file "unattended_upgrades" {
+	targets    = local.file_match.unattended_upgrades.targets
+	forward_to = [loki.write.loki.receiver]
+}
+
+// ---------------------------------------------------------------------------
+// 3. Docker container logs — every container's stdout/stderr, labelled by
+//    container name (covers the o11y stack itself + any other container on the host).
+// ---------------------------------------------------------------------------
+
+// Asks the Docker daemon for the current list of running containers.
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+// Labels each container: container=name (slash stripped), job=docker, host.
+discovery.relabel "docker" {
+	targets = []
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	rule {
+		target_label = "job"
+		replacement  = "docker"
+	}
+
+	rule {
+		target_label = "host"
+		replacement  = constants.hostname
+	}
+}
+
+// Tails each container's stdout/stderr; forwards labeled lines to the writer.
+loki.source.docker "containers" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.docker.rules
+	forward_to    = [loki.write.loki.receiver]
+}

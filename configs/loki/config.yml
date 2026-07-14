@@ -1,0 +1,92 @@
+# Multi-tenant auth: off. In a homelab with one user there are no separate
+# tenants to isolate, so no auth between them is needed.
+auth_enabled: false
+
+# Network ports and log verbosity. Port 3100 is the HTTP port that Grafana and
+# Alloy talk to; 9096 is an internal gRPC port (Loki components talking to each
+# other). log_level info is normal; "debug" would be very noisy.
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+  grpc_server_max_concurrent_streams: 1000
+
+# Single-node plumbing: the address this instance listens on, the base folder
+# for all its data (/loki = the named volume), how many copies of each log
+# stream to keep (1, since there's only one instance), and the in-memory
+# "who's alive" registry (correct for one node; a cluster would use consul/etcd).
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+# How Loki indexes logs, and since when this layout is active. Loki indexes
+# only labels (metadata like job/container/unit) — not the log text itself —
+# which is what keeps it light on RAM. TSDB is the modern index format; one
+# index block is written per day (period: 24h), which is required for retention.
+schema_config:
+  configs:
+    - from: 2024-01-01   # logs ingested on/after this date use this schema; a
+                         # safely-early date so it covers everything from day one
+                         # (the index format is fixed at write time — to change it
+                         # later you'd add a new entry with a future `from` date)
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h          # retention REQUIRES a 24h index period for TSDB
+
+# Where on disk (under /loki) the pieces live: the active index, its query
+# cache, and the compressed log chunks (the actual log text, grouped by labels).
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki/chunks
+
+# Background job that merges old index blocks together and deletes logs older
+# than the retention period. retention_enabled alone is NOT enough — Loki 3.x
+# also requires delete_request_store, or retention silently never runs.
+# retention_delete_delay is a grace window before a 14-day-old chunk is
+# actually deleted; retention_delete_worker_count is how many chunks the
+# compactor deletes in parallel.
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  delete_request_store: filesystem   # required when retention_enabled is true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+
+# How long to keep logs: 336h = 14 days. The minimum is 24h because TSDB
+# retention works per-day. Pairs with the compactor block above to actually
+# delete old data — the compactor does the deleting, this sets the age limit.
+limits_config:
+  retention_period: 336h             # 14 days (minimum 24h)
+
+# Caches query results so repeated or auto-refreshed queries are answered from
+# this 100 MB cache instead of re-reading chunks. Purely a performance nicety.
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+# Configures Loki's query-frontend, the coordinator between Grafana and the
+# queriers that splits queries into time slices, dedupes and caches them, so
+# the queriers send their results back as compact protobuf instead of JSON,
+# letting the frontend use them directly. This skips a JSON decode/re-encode
+# step in the frontend, saving resources — negligible on one node.
+frontend:
+  encoding: protobuf
+
+# Disable sending anonymous usage stats to Grafana Labs. This is self-hosted,
+# so there's no reason to report back.
+analytics:
+  reporting_enabled: false

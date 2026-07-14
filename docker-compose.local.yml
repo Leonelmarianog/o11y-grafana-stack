@@ -45,8 +45,38 @@ services:
       - /run/dbus:/run/dbus:ro
       - /run/udev:/run/udev:ro
 
+  loki:
+    image: grafana/loki:3.7.3
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/config.yml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - o11y-loki-data:/loki
+      - ./configs/loki:/etc/loki:ro
+
+  alloy:
+    image: grafana/alloy:v1.17.1
+    restart: unless-stopped
+    user: "0:0"  # root, to read the root:adm 640 log files and the journal files
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+    ports:
+      - "127.0.0.1:12345:12345"
+    volumes:
+      - ./configs/alloy:/etc/alloy:ro
+      - /var/log:/var/log:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
 volumes:
   o11y-grafana-data:
     name: o11y-grafana-data
   o11y-vm-data:
     name: o11y-vm-data
+  o11y-loki-data:
+    name: o11y-loki-data
