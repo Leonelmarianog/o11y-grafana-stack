@@ -46,6 +46,8 @@ services:
   cadvisor:
     image: ghcr.io/google/cadvisor:v0.60.5
     restart: unless-stopped
+    command:
+      - -store_container_labels=false  # don't turn Docker labels into Prometheus labels: cAdvisor maps every Docker label (Coolify/Traefik routing rules, OCI image metadata) to a container_label_* per series, pushing publicly-routed containers over VictoriaMetrics' default 40-label limit so VM silently drops them; stripping keeps only name/image/instance and shrinks the scrape
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
