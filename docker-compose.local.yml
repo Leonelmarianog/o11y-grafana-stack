@@ -47,6 +47,18 @@ services:
       - /run/dbus:/run/dbus:ro
       - /run/udev:/run/udev:ro
 
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
   loki:
     image: grafana/loki:3.7.3
     restart: unless-stopped
