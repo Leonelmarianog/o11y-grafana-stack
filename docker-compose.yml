@@ -9,6 +9,13 @@ services:
       - GF_SERVER_ROOT_URL=${SERVICE_URL_GRAFANA}
       - GF_SERVER_DOMAIN=${SERVICE_FQDN_GRAFANA}
       - GF_SERVER_ENABLE_GZIP=false  # disable response gzip: the pgzip middleware leaks goroutines per request (Grafana 13.0.2 regression, issue #123017); Cloudflare gzips at the edge anyway
+      # Outbound email for alert notifications, via Mailgun SMTP. All values come from env vars (set in Coolify); none are baked in here. Unset → SMTP stays off/inert until you configure them.
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED}
+      - GF_SMTP_HOST=${GF_SMTP_HOST}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
     volumes:
       - o11y-grafana-data:/var/lib/grafana
     healthcheck:
