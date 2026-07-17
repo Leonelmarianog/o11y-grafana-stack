@@ -991,7 +991,7 @@
       "hideTimepicker": false,
       "fiscalYearStartMonth": 0
     },
-    "title": "Docker Containers",
+    "title": "Docker Container Metrics",
     "variables": [
       {
         "kind": "QueryVariable",
