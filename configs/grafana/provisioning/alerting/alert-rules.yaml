@@ -1,0 +1,290 @@
+# Grafana alert rules for the homelab o11y stack (provisioned via file
+# provisioning). Routing to the "Email Alerts" contact point is handled in
+# notification-policies.yaml, so no per-rule notification_settings here.
+
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: standard-1m
+    folder: Homelab
+    interval: 1m
+    rules:
+      # 1. Server root disk above 80% — root filesystem usage.
+      - uid: afsbwffs097uoa
+        title: Server root disk above 80%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: efrpvcumozthcd
+            model:
+              editorMode: code
+              expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: The server's root disk is over 80% full ({{ $value }}% used on {{$labels.device}}). This is usually caused by logs, metrics, or container data piling up. If it continues, the disk fills completely and services start failing — containers can't write, databases and logs can corrupt, and the server may stop responding. Check what's growing and clear it.
+          summary: Server root disk on {{$labels.device}} is {{ $value }}% full.
+        labels:
+          alertname: ServerDiskHigh
+          severity: warning
+        isPaused: false
+
+      # 2. Server CPU above 80% sustained over 10 minutes.
+      - uid: efsbwxd2fyadcd
+        title: Server CPU above 80%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: efrpvcumozthcd
+            model:
+              editorMode: code
+              expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: The server's CPU is over 80% busy ({{ $value }}% on {{$labels.instance}}) and has been for more than 10 minutes. This is usually caused by a container or process working hard. If it continues, everything on the server slows down, requests start timing out, and other containers get starved of CPU until the server becomes unresponsive. Check which container or process is burning CPU (cAdvisor dashboard, or docker stats on the VPS).
+          summary: Server CPU on {{$labels.instance}} is {{ $value }}% busy.
+        labels:
+          alertname: ServerCPUHigh
+          severity: warning
+        isPaused: false
+
+      # 3. Container CPU above 80% of a single core for 10 minutes.
+      - uid: afsbx2q2piccgd
+        title: Container CPU above 80% of a core
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: efrpvcumozthcd
+            model:
+              editorMode: code
+              expr: sum by (name) (rate(container_cpu_usage_seconds_total{name!="",cpu="total"}[5m])) * 100
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: The container "{{$labels.name}}" is using over 80% of a CPU core ({{ $value }}%) and has been for more than 10 minutes. This is usually caused by the app being stuck in a loop. If it continues, it will steal CPU from every other container on the server, slow the whole server down, and burn resources for no useful work. Check the container and its logs.
+          summary: Container {{$labels.name}} is using {{ $value }}% of a CPU core.
+        labels:
+          alertname: ContainerCPUHigh
+          severity: warning
+        isPaused: false
+
+      # 4. Container memory above 2 GB for 10 minutes.
+      - uid: cfsbx8smk6ozkc
+        title: Container memory above 2 GB
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: efrpvcumozthcd
+            model:
+              editorMode: code
+              expr: container_memory_working_set_bytes{name!=""}
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 2147483648
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: The container "{{$labels.name}}" is using over 2 GB of memory ({{ humanize1024 $value }}) and has been for over 10 minutes. This is usually caused by a memory leak in the app. If it continues, it will eat the server's memory until the container gets killed suddenly (OOM) or the whole server starts swapping and grinds to a halt. Check the container and its logs before that happens.
+          summary: Container {{$labels.name}} is using {{ humanize1024 $value }} of memory.
+        labels:
+          alertname: ContainerMemoryHigh
+          severity: warning
+        isPaused: false
+
+      # 5. Container restart loop — 3+ (re)starts in a 15m window.
+      - uid: dfsbxeip24mbke
+        title: Container restarts above 3
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: efrpvcumozthcd
+            model:
+              editorMode: code
+              expr: changes(container_start_time_seconds{name!=""}[15m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 3
+                    type: gte
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        annotations:
+          description: The container "{{$labels.name}}" has restarted {{ $value }} times in the last 15 minutes. This is usually caused by a bad config or an app that won't start. If it continues, that service stays down and anything that depends on it will start failing too. Check the container's logs and configuration before the outage spreads.
+          summary: Container {{$labels.name}} has restarted {{ $value }} times.
+        labels:
+          alertname: ContainerRestartLoop
+          severity: warning
+        isPaused: false

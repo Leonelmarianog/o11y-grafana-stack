@@ -1,0 +1,14 @@
+# Email contact point for alert notifications. The recipient comes from the
+# $GRAFANA_ALERT_EMAIL env var so the address stays out of git.
+
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: Email Alerts
+    receivers:
+      - uid: efsbwdsjey0aoe
+        type: email
+        settings:
+          addresses: $GRAFANA_ALERT_EMAIL
+          singleEmail: false
+        disableResolveMessage: false

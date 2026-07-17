@@ -1,0 +1,14 @@
+# Root notification policy: routes every alert to the "Email Alerts" contact
+# point (defined in contact-points.yaml) and groups by folder + alert name so
+# same-type alerts batch into one email.
+
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: Email Alerts
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
