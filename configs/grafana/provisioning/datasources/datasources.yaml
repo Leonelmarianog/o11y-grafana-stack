@@ -1,0 +1,25 @@
+# Configures the classic file-based data source provider. Grafana scans this
+# directory for data source configs; each entry below adopts an existing
+# UI-created source by uid (so dashboards keep working) and marks it read-only.
+# The repo is the source of truth.
+
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics
+    uid: efrpvcumozthcd
+    orgId: 1
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+    editable: false
+
+  - name: loki
+    uid: efs1djqmufy0wb
+    orgId: 1
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
