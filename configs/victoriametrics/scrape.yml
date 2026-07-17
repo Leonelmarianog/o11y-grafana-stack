@@ -12,8 +12,9 @@ scrape_configs:
     # 1. raw `name` — fallback. Gives Coolify's own containers their natural names
     #    (coolify-redis, coolify-sentinel, …) and the transient build-helper its UUID.
     # 2. compose service — but ONLY when the name is a suffixed Coolify-resource name
-    #    (`<svc>-<UUID>-<deployId>`, i.e. the o11y stack). The gate (a `-<UUID>-<digits>;`
-    #    in the name) stops this step from flattening `coolify-redis` → `redis`.
+    #    (`<svc>-<UUID>-<deployId>`, i.e. the o11y stack). Relabel regexes are fully
+    #    anchored, so this matches the whole `<name>;<compose_service>` pair (service
+    #    prefix included); that gate stops it from flattening `coolify-redis` → `redis`.
     # 3. coolify.serviceName — ONLY when the compose service is a Coolify UUID (routed
     #    apps like the portfolio → `leogaunadev`); that gate stops the o11y stack's
     #    shared coolify.serviceName ("grafana-stack") from collapsing its six
@@ -28,7 +29,7 @@ scrape_configs:
         replacement: "${1}"
       - target_label: alias
         source_labels: [name, container_label_com_docker_compose_service]
-        regex: "-[0-9A-Za-z]{20,}-[0-9]+;(.+)"
+        regex: "[0-9A-Za-z_-]+-[0-9A-Za-z]{20,}-[0-9]+;(.+)"
         replacement: "${1}"
       - target_label: alias
         source_labels: [container_label_com_docker_compose_service, container_label_coolify_serviceName]
