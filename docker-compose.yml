@@ -9,6 +9,7 @@ services:
       - GF_SERVER_ROOT_URL=${SERVICE_URL_GRAFANA}
       - GF_SERVER_DOMAIN=${SERVICE_FQDN_GRAFANA}
       - GF_SERVER_ENABLE_GZIP=false  # disable response gzip: the pgzip middleware leaks goroutines per request (Grafana 13.0.2 regression, issue #123017); Cloudflare gzips at the edge anyway
+      - GF_PATHS_PERMITTED_PROVISIONING_PATHS=/etc/grafana/provisioning/  # v13 file-provisioning: whitelist the mounted provisioning dir so the UI "Connect to local storage" can read dashboard resources from it
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED}
       - GF_SMTP_HOST=${GF_SMTP_HOST}
       - GF_SMTP_USER=${GF_SMTP_USER}
