@@ -60,7 +60,6 @@ services:
     restart: unless-stopped
     command:
       - -store_container_labels=false  # don't turn Docker labels into Prometheus labels (see docker-compose.yml); keeps series under VictoriaMetrics' 40-label limit
-      - -whitelisted_container_labels=coolify.serviceName,com.docker.compose.service  # export only these two (needs store_container_labels=false) so the `alias` relabel can read them
     ports:
       - "127.0.0.1:8080:8080"
     volumes:

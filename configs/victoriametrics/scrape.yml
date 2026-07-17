@@ -7,22 +7,3 @@ scrape_configs:
     scrape_interval: 60s
     static_configs:
       - targets: ['cadvisor:8080']
-    # Build a clean `alias` label per container so dashboards show readable names
-    # instead of Coolify's UUID-style container names. Last match wins: raw name
-    # → compose service → coolify.serviceName. The last step fires only when the
-    # compose service is a Coolify UUID (routed apps like the portfolio); that gate
-    # stops the o11y stack's shared coolify.serviceName ("grafana-stack") from
-    # collapsing its six containers into one indistinguishable alias.
-    metric_relabel_configs:
-      - target_label: alias
-        source_labels: [name]
-        regex: "(.+)"
-        replacement: "${1}"
-      - target_label: alias
-        source_labels: [container_label_com_docker_compose_service]
-        regex: "(.+)"
-        replacement: "${1}"
-      - target_label: alias
-        source_labels: [container_label_com_docker_compose_service, container_label_coolify_servicename]
-        regex: "[0-9A-Za-z]{20,}-[0-9]+;(.+)"
-        replacement: "${1}"
