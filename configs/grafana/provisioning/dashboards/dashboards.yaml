@@ -1,0 +1,19 @@
+# File-provisioned dashboards for the homelab o11y stack. Grafana scans this
+# directory for provider configs (like this one); the dashboard files themselves
+# live in a SEPARATE directory (options.path below) so the config scanner never
+# mistakes a dashboard for a provider config (that crashes startup — see
+# cadvisor-containers.yaml's history). The repo is the source of truth: edit a
+# dashboard file, push, and Coolify's redeploy reloads Grafana. Boards are
+# read-only in the UI (allowUiUpdates defaults to false).
+
+apiVersion: 1
+
+providers:
+  - name: homelab-o11y
+    orgId: 1
+    folder: Homelab
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards-files
