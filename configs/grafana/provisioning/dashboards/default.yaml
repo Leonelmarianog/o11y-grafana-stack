@@ -1,0 +1,17 @@
+# Configures the classic file-based dashboard provider. Grafana scans this
+# directory for provider configs like this one; the dashboard files themselves
+# live in the separate options.path dir below — placing a dashboard resource
+# file here crashes startup (the scanner tries to parse it as a provider config).
+# The repo is the source of truth; boards are read-only in the UI.
+
+apiVersion: 1
+
+providers:
+  - name: Default
+    orgId: 1
+    folder: Homelab
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards-files
