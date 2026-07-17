@@ -19,7 +19,6 @@ services:
     volumes:
       - o11y-grafana-data:/var/lib/grafana
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./configs/grafana/dashboards-files:/etc/grafana/dashboards-files:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:3000/api/health"]
       interval: 5s
